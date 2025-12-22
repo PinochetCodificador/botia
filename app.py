@@ -111,7 +111,7 @@ with col_a:
     <div class="tiktok-card">
         <h3>🔥 Síguenos en TikTok</h3>
         <p>No te pierdas los mejores análisis en video.</p>
-        <a href="https://www.tiktok.com/@TU_USUARIO" target="_blank" class="btn-apostar" style="color: #000 !important;">VER TIKTOK</a>
+        <a href="https://www.tiktok.com/@combinadas.top.ff" target="_blank" class="btn-apostar" style="color: #000 !important;">VER TIKTOK</a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -123,3 +123,4 @@ with col_b:
         <a href="https://tu-link-de-afiliado-betano.com" target="_blank" class="btn-apostar">APOSTAR AHORA</a>
     </div>
     """, unsafe_allow_html=True)
+
