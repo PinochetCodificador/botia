@@ -90,3 +90,4 @@ with st.sidebar:
     if st.button("🔄 Refrescar Datos"):
         st.cache_data.clear()
         st.rerun()
+
