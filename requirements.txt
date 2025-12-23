@@ -1,5 +1,3 @@
 streamlit
-pandas
-scipy
-numpy
 requests
+scipy
