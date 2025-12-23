@@ -1,92 +1,85 @@
 import streamlit as st
 import requests
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="IA NBA Real Predictor", layout="wide")
+# --- CONFIGURACIÓN PREMIUM ---
+st.set_page_config(page_title="IA NBA Predictor Real-Time", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #060c14; color: white; }
-    [data-testid="stMetricValue"] { color: #2ecc71 !important; }
-    .stHeader { border-bottom: 2px solid #1d428a; padding-bottom: 10px; }
+    .card { background: #111d2b; padding: 20px; border-radius: 15px; border-left: 5px solid #2ecc71; margin-bottom: 20px; }
+    .metric-label { color: #bdc3c7; font-size: 0.9rem; }
+    .metric-value { color: #2ecc71; font-size: 1.2rem; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONFIGURACIÓN API ---
 API_KEY = "d53ac1f6-2e4e-4027-bc8f-ba4e8fd5d857"
 HEADERS = {'Authorization': API_KEY}
 
-def obtener_datos_reales():
-    # Consultamos la jornada específica del 23 de diciembre
-    url = "https://api.balldontlie.io/v1/games?dates[]=2025-12-23"
+@st.cache_data(ttl=3600)
+def obtener_datos(url):
     try:
         r = requests.get(url, headers=HEADERS, timeout=10)
         return r.json().get('data', [])
     except:
         return []
 
-def asignar_pick_especifico(nombre_equipo):
-    # BASE DE DATOS AMPLIADA: Cubre a la mayoría de equipos para evitar el "Jugador de Rol"
-    picks_elite = {
-        "Thunder": ("Shai Gilgeous-Alexander", "Más de 31.5 Pts+Ast", "89%"),
-        "Mavericks": ("Luka Doncic", "Más de 8.5 Asistencias", "88%"),
-        "Nuggets": ("Nikola Jokic", "Más de 12.5 Rebotes", "91%"),
-        "Celtics": ("Jayson Tatum", "Más de 26.5 Puntos", "84%"),
-        "76ers": ("Joel Embiid", "Más de 30.5 Puntos", "87%"),
-        "Lakers": ("Anthony Davis", "Más de 13.5 Rebotes", "83%"),
-        "Warriors": ("Stephen Curry", "Más de 4.5 Triples", "82%"),
-        "Bucks": ("Giannis Antetokounmpo", "Más de 11.5 Rebotes", "85%"),
-        "Suns": ("Kevin Durant", "Más de 25.5 Puntos", "81%"),
-        "Pacers": ("Tyrese Haliburton", "Más de 11.5 Asistencias", "86%"),
-        "Timberwolves": ("Anthony Edwards", "Más de 25.5 Puntos", "80%"),
-        "Knicks": ("Jalen Brunson", "Más de 6.5 Asistencias", "83%"),
-        "Grizzlies": ("Ja Morant", "Más de 7.5 Asistencias", "79%"),
-        "Heat": ("Jimmy Butler", "Más de 20.5 Puntos", "77%"),
-        "Kings": ("Domantas Sabonis", "Más de 12.5 Rebotes", "85%"),
-        "Cavaliers": ("Donovan Mitchell", "Más de 24.5 Puntos", "81%"),
-        "Magic": ("Paolo Banchero", "Más de 22.5 Puntos", "78%"),
-        "Rockets": ("Alperen Sengun", "Más de 10.5 Rebotes", "82%"),
-        "Spurs": ("Victor Wembanyama", "Más de 3.5 Tapones", "88%"),
-        "Hawks": ("Trae Young", "Más de 10.5 Asistencias", "84%"),
-        "Bulls": ("Zach LaVine", "Más de 21.5 Puntos", "76%"),
-        "Nets": ("Cam Thomas", "Más de 23.5 Puntos", "75%"),
-        "Hornets": ("LaMelo Ball", "Más de 7.5 Asistencias", "80%"),
-        "Wizards": ("Jordan Poole", "Más de 18.5 Puntos", "72%")
-    }
-    
-    for equipo, datos in picks_elite.items():
-        if equipo in nombre_equipo:
-            return datos
-    return None
+st.title("🏀 NBA IA Predictor - Datos Reales")
+st.write("Analizando plantillas actualizadas al 23/12/2025...")
 
-# --- INTERFAZ ---
-st.title("🏀 NBA IA Predictor - Picks de Estrellas")
-st.write("Análisis estadístico de Player Props para la jornada de hoy.")
-
-partidos = obtener_datos_reales()
+# 1. Obtener partidos de hoy
+partidos = obtener_datos("https://api.balldontlie.io/v1/games?dates[]=2025-12-23")
 
 if not partidos:
-    st.error("No se detectan partidos activos. Revisa tu API Key.")
+    st.error("No se encontraron partidos. Verifica tu API KEY o el calendario.")
 else:
     for p in partidos:
-        loc = p['home_team']['full_name']
-        vis = p['visitor_team']['full_name']
+        id_local = p['home_team']['id']
+        nom_local = p['home_team']['full_name']
+        nom_vis = p['visitor_team']['full_name']
         
-        # Intentamos buscar pick para el local, si no, para el visitante
-        pick_data = asignar_pick_especifico(loc)
-        if not pick_data:
-            pick_data = asignar_pick_especifico(vis)
+        # 2. Consultar dinámicamente jugadores del equipo local (Temporada 2025)
+        # Esto asegura que el jugador realmente esté en ese equipo hoy
+        url_stats = f"https://api.balldontlie.io/v1/season_averages?season=2025&team_ids[]={id_local}"
+        stats_jugadores = obtener_datos(url_stats)
         
-        # Si de plano no hay estrella registrada, generamos un pick genérico de "Puntos Totales"
-        if not pick_data:
-            jugador, sugerencia, confianza = "Análisis de Equipo", "Más de 218.5 Puntos Totales", "70%"
+        # Buscamos al máximo anotador actual del equipo local
+        if stats_jugadores:
+            mejor_jugador_data = max(stats_jugadores, key=lambda x: x['pts'])
+            
+            # Buscamos el nombre del jugador (BallDontLie requiere otra consulta o usar un mapa)
+            # Para simplificar y que sea rápido, usaremos el ID del jugador para una sugerencia lógica
+            jugador_id = mejor_jugador_data['player_id']
+            puntos_avg = mejor_jugador_data['pts']
+            asist_avg = mejor_jugador_data['ast']
+            
+            with st.container():
+                st.markdown(f"""
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 1.5rem; font-weight: bold;">{nom_local} vs {nom_vis}</span>
+                        <span style="color: #f1c40f;">LIVE IA ANALYSIS</span>
+                    </div>
+                    <hr style="border-color: #1d428a;">
+                    <div style="display: flex; justify-content: space-around; text-align: center;">
+                        <div>
+                            <div class="metric-label">JUGADOR CLAVE (ID)</div>
+                            <div class="metric-value">Player #{jugador_id}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">PROMEDIO TEMP.</div>
+                            <div class="metric-value">{puntos_avg} PTS</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">PICK SUGERIDO</div>
+                            <div class="metric-value">Más de {round(puntos_avg - 2.5)}.5 Puntos</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            jugador, sugerencia, confianza = pick_data
+            st.info(f"Analizando rotaciones de {nom_local}...")
 
-        with st.expander(f"📍 {loc} vs {vis}", expanded=True):
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Estrella", jugador)
-            c2.metric("Prop Sugerido", sugerencia)
-            c3.metric("Confianza", confianza)
-
-st.sidebar.link_button("🔥 APOSTAR EN BETANO", "https://tu-link-betano.com")
+st.sidebar.markdown("### 🛠️ Sistema Inteligente")
+st.sidebar.write("Esta versión no usa nombres fijos. Lee las plantillas oficiales de la temporada 2025 en tiempo real.")
+st.sidebar.link_button("🔥 REGISTRARSE EN BETANO", "https://tu-link-betano.com")
