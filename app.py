@@ -31,7 +31,7 @@ picks_reales = [
         "alerta": "EMBIID ES PROBABLE PERO LIMITADO"
     },
     {
-        "partido": "New York Knicks vs Minnesita Timberwolves",
+        "partido": "New York Knicks vs Minnesota Timberwolves",
         "jugador": "Josh Hart",
         "pick": "Más de 6.5 Asistencias",
         "confianza": "89%",
@@ -89,4 +89,5 @@ for p in picks_reales:
 st.sidebar.title("💰 Link de Afiliado")
 st.sidebar.write("Estos picks se basan en las bajas confirmadas de Doncic, Brunson y Giannis.")
 st.sidebar.link_button("🔥 REGISTRARSE EN BETANO", "https://tu-link-betano.com")
+
 
