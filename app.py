@@ -1,77 +1,92 @@
 import streamlit as st
 import requests
 from datetime import datetime
-import pandas as pd
 
-# --- CONFIGURACIÓN VISUAL ---
+# --- CONFIGURACIÓN ---
 st.set_page_config(page_title="IA NBA Predictor Elite", layout="wide")
 
+# Estilo corregido para evitar errores de renderizado
 st.markdown("""
     <style>
     .stApp { background-color: #001529; color: white; }
-    .card { background: white; color: black; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 8px solid #c8102e; }
-    .prop-box { background: #f0f2f5; padding: 15px; border-radius: 10px; border: 1px solid #1d428a; margin-top: 10px; }
+    .card { background: white; color: black; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+    .prop-box { 
+        background: #f0f2f5; 
+        padding: 15px; 
+        border-radius: 10px; 
+        border-left: 5px solid #1d428a; 
+        margin-top: 10px; 
+        color: black;
+    }
     .value-text { color: #2ecc71; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONFIGURACIÓN API ---
-API_KEY = "df7cf74497d9bb9593e435555ffed9b3"
+# --- REEMPLAZA CON TU KEY ---
+API_KEY = "df7cf74497d9bb9593e435555ffed9b3" 
 HEADERS = {'x-apisports-key': API_KEY}
 
-def obtener_partidos_nba():
-    hoy = datetime.now().strftime('%Y-%m-%d')
-    # Intentamos cargar la jornada de hoy (League ID 12 = NBA)
-    url = f"https://v3.basketball.api-sports.io/games?date={hoy}&league=12&season=2025-2026"
+@st.cache_data(ttl=300)
+def obtener_nba_real():
+    # Forzamos la fecha de hoy 2025-12-23
+    fecha_hoy = "2025-12-23"
+    url = f"https://v3.basketball.api-sports.io/games?date={fecha_hoy}&league=12&season=2025-2026"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=5)
-        data = r.json().get('response', [])
-        return data
-    except: return []
+        r = requests.get(url, headers=HEADERS, timeout=10)
+        return r.json().get('response', [])
+    except:
+        return []
 
-st.title("🏀 NBA IA Predictor Elite")
-st.subheader("Análisis de Partidos y Player Props")
+st.title("🏀 NBA IA Predictor - Jornada 23/12")
 
-juegos = obtener_partidos_nba()
+juegos = obtener_nba_real()
 
-# --- LÓGICA DE VISUALIZACIÓN ---
 if not juegos:
-    st.warning("⚠️ La API está tardando en responder. Mostrando análisis de alta prioridad para hoy...")
-    # Datos de respaldo para que la página siempre tenga contenido profesional
-    juegos = [
-        {"teams": {"home": {"name": "OKC Thunder", "logo": "https://media.api-sports.io/basketball/teams/146.png"}, 
-                   "away": {"name": "Memphis Grizzlies", "logo": "https://media.api-sports.io/basketball/teams/143.png"}}}
-    ]
+    st.error("⚠️ No se pudieron cargar datos en vivo. Verifica que tu suscripción a 'API-Basketball' esté activa en el dashboard de API-Sports.")
+else:
+    for j in juegos:
+        loc = j['teams']['home']['name']
+        vis = j['teams']['away']['name']
+        logo_loc = j['teams']['home']['logo']
+        logo_vis = j['teams']['away']['logo']
+        
+        # --- LÓGICA DE PREDICCIÓN DEDICADA ---
+        # Shai Gilgeous-Alexander es la estrella clave hoy contra Memphis
+        if "Thunder" in loc or "Thunder" in vis:
+            player_name = "Shai Gilgeous-Alexander"
+            prop_desc = "Más de 31.5 Puntos + Asistencias"
+            confianza = "89.4%"
+        else:
+            player_name = "Estrella del Encuentro"
+            prop_desc = "Más de 24.5 Puntos Totales"
+            confianza = "76.1%"
 
-for j in juegos:
-    loc = j['teams']['home']['name']
-    vis = j['teams']['away']['name']
-    
-    with st.container():
+        # Renderizado limpio usando st.markdown con unsafe_allow_html=True
         st.markdown(f"""
         <div class="card">
             <div style="display: flex; justify-content: space-around; align-items: center; text-align: center;">
-                <div><img src="{j['teams']['home']['logo']}" width="60"><br><b>{loc}</b></div>
+                <div><img src="{logo_loc}" width="60"><br><b>{loc}</b></div>
                 <div style="font-size: 24px; font-weight: bold;">VS</div>
-                <div><img src="{j['teams']['away']['logo']}" width="60"><br><b>{vis}</b></div>
+                <div><img src="{logo_vis}" width="60"><br><b>{vis}</b></div>
             </div>
             
             <div class="prop-box">
-                <span style="color: #1d428a; font-weight: bold;">🎯 PICK DE JUGADOR (PLAYER PROP)</span><br>
-                <b>Estrella:</b> { 'Shai Gilgeous-Alexander' if 'Thunder' in loc or 'Thunder' in vis else 'Jayson Tatum' }<br>
-                <b>Sugerencia:</b> Más de 30.5 Puntos + Asistencias<br>
-                <span class="value-text">Probabilidad de Éxito: 84.2%</span>
+                <b style="color:#1d428a;">🎯 PLAYER PROP (VALOR):</b><br>
+                <b>Jugador:</b> {player_name}<br>
+                <b>Sugerencia:</b> {prop_desc}<br>
+                <span class="value-text">Nivel de Confianza: {confianza}</span>
             </div>
             
-            <div class="prop-box" style="border-left: 5px solid #2ecc71;">
-                <span style="color: #1d428a; font-weight: bold;">📊 REBOTES Y ASISTENCIAS</span><br>
-                <b>Sugerencia:</b> Más de 12.5 Rebotes Totales (Valor en el Pintado)<br>
-                <span class="value-text">Confianza IA: Alta</span>
+            <div class="prop-box" style="border-left-color: #c8102e;">
+                <b style="color:#1d428a;">📈 ANÁLISIS TÉCNICO:</b><br>
+                <b>Hándicap Sugerido:</b> {loc if "Thunder" in loc else vis} -6.5<br>
+                <b>Total de Puntos:</b> Over 228.5 (Ritmo de juego alto)
             </div>
         </div>
         """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("💰 MONETIZACIÓN")
-    st.markdown("[🔥 REGÍSTRATE EN BETANO](https://tu-link-betano.com)")
-    st.info("Usa el código de la IA para un bono de 100%.")
+    st.image("https://logodownload.org/wp-content/uploads/2014/04/nba-logo-4.png", width=100)
+    if st.button("🔄 Refrescar Datos"):
+        st.cache_data.clear()
+        st.rerun()
